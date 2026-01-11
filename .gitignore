@@ -1,0 +1,50 @@
+# Archivos cache de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entorno virtual
+venv/
+.venv/
+env/
+.env/
+
+# Archivos de configuracion del IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de video grandes (si los tienes)
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Archivos de sistema Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Archivos de sistema Linux
+ Thumbs.db
+ .Trashes
+
+# Archivos de configuración personal
+.env
+.env.local
+.env.*.local
+
+# Archivos de log
+*.log
+
+# Base de datos (si tienes alguna)
+*.db
+*.sqlite
+
+# Archivos de prueba coverage
+htmlcov/
+.coverage
+.coverage.*
+*.coverag

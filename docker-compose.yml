@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  pullup-vision:
+    build: .
+    container_name: pullup-vision-pro
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=PullUp Vision Pro
+      - VERSION=1.0.0
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MAX_VIDEO_SIZE_MB=50
+      - ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./uploads:/app/uploads
+      - ./processed:/app/processed
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

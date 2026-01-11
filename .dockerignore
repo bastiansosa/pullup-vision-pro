@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv
+env/
+venv/
+uploads/
+processed/
+.git/
+.gitignore
+README.md
+tests/
+.coverage
+htmlcov/

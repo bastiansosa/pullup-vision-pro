@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PullUp Vision Pro - AI Rep Counter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00f2ea, #00c4a7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 1.2rem;
+        }
+        
+        .upload-zone {
+            border: 3px dashed #333;
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #222;
+            margin-bottom: 40px;
+        }
+        
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #00f2ea;
+            background: #252525;
+        }
+        
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #333;
+            border-top-color: #00f2ea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f2ea, #00c4a7);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .results {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+        }
+        
+        .video-container {
+            background: #222;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        video {
+            width: 100%;
+            display: block;
+        }
+        
+        .stats-container {
+            background: #222;
+            border-radius: 16px;
+            padding: 30px;
+        }
+        
+        .counter-display {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 30px;
+        }
+        
+        .counter-number {
+            font-size: 120px;
+            font-weight: bold;
+            color: #00f2ea;
+            line-height: 1;
+        }
+        
+        .counter-label {
+            font-size: 1.2rem;
+            color: #888;
+            margin-top: 10px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .stat-label {
+            color: #888;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #00f2ea, #00c4a7);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 20px 30px;
+            border-radius: 10px;
+            color: #fff;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.success {
+            background: #00c4a7;
+        }
+        
+        .toast.error {
+            background: #ff4757;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 80px;
+            color: #555;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .counter-number {
+                font-size: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PullUp Vision Pro</h1>
+            <p class="subtitle">Análisis inteligente de dominadas con IA</p>
+        </header>
+        
+        <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">📹</div>
+            <p class="upload-text">Arrastra tu video aquí o haz clic para seleccionar</p>
+            <p class="upload-hint">Formatos admitidos: MP4, MOV, AVI (máx. 50MB)</p>
+            <input type="file" id="fileInput" accept="video/mp4,video/mov,video/avi">
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analizando tu técnica de dominadas...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="progressText" style="margin-top: 10px; color: #888;">0%</p>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="video-container">
+                <video id="resultVideo" controls>
+                    Tu navegador no soporta el elemento de video.
+                </video>
+            </div>
+            
+            <div class="stats-container">
+                <div class="counter-display">
+                    <div class="counter-number" id="counterNumber">0</div>
+                    <div class="counter-label">Dominadas completadas</div>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">Duración del video</span>
+                    <span class="stat-value" id="durationValue">-</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">FPS</span>
+                    <span class="stat-value" id="fpsValue">-</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">Tiempo de procesamiento</span>
+                    <span class="stat-value" id="processingTime">-</span>
+                </div>
+                
+                <a href="/" class="btn btn-secondary" style="display: block; text-align: center;">
+                    Analizar otro video
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <footer>
+        <p>PullUp Vision Pro - Desarrollado con MediaPipe & FastAPI</p>
+    </footer>
+    
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const toast = document.getElementById('toast');
+        
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) uploadFile(file);
+        });
+        
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) uploadFile(file);
+        });
+        
+        async function uploadFile(file) {
+            // Validar tipo
+            const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/x-msvideo'];
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (!['mp4', 'mov', 'avi'].includes(extension)) {
+                showToast('Formato no permitido. Usa MP4, MOV o AVI.', 'error');
+                return;
+            }
+            
+            // Validar tamaño (50MB)
+            if (file.size > 50 * 1024 * 1024) {
+                showToast('Archivo muy grande. Máximo 50MB.', 'error');
+                return;
+            }
+            
+            // Mostrar loading
+            uploadZone.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Crear FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                // Subir video
+                const response = await fetch('/api/v1/analizar', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail?.error || 'Error en el servidor');
+                }
+                
+                const data = await response.json();
+                
+                // Mostrar resultados
+                displayResults(data);
+                
+            } catch (error) {
+                showToast(error.message, 'error');
+                loading.style.display = 'none';
+                uploadZone.style.display = 'block';
+            }
+        }
+        
+        function displayResults(data) {
+            loading.style.display = 'none';
+            results.style.display = 'grid';
+            
+            // Mostrar video
+            const video = document.getElementById('resultVideo');
+            video.src = `/api/v1/video/${data.video_salida}`;
+            
+            // Mostrar contador
+            document.getElementById('counterNumber').textContent = data.repeticiones;
+            
+            // Mostrar estadísticas
+            document.getElementById('durationValue').textContent = 
+                `${data.duracion_segundos.toFixed(1)}s`;
+            document.getElementById('fpsValue').textContent = 
+                `${data.fps.toFixed(1)}`;
+            document.getElementById('processingTime').textContent = 
+                `${data.tiempo_procesamiento.toFixed(2)}s`;
+            
+            showToast('¡Análisis completado!', 'success');
+        }
+        
+        function showToast(message, type) {
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
