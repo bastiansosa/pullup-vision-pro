@@ -1,13 +1,13 @@
 """
 Endpoints de la API para el contador de dominadas.
- Maneja las solicitudes HTTP y la lógica de negocio.
+ Maneja las solicitudes HTTP y la logica de negocio.
 """
 
 # Importamos las herramientas basicas que necesitamos para hacer el trabajo
 import os              # Para manejar archivos y carpetas del sistema operativo
 import uuid            # Para generar nombres unicos para los archivos subidos
 import shutil          # Para copiar o mover archivos si es necesario
-import structlog       # Para hacer logging estructurado (ver民生or lo que pasa en la app)
+import structlog       # Para hacer logging estructurado (ver lo que pasa en la app)
 
 # FastAPI nos da las herramientas para crear la API REST
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
@@ -40,13 +40,27 @@ logger = structlog.get_logger(__name__)
 # Esto es como un contenedor que agrupa todos nuestros endpoints
 router = APIRouter()
 
+
+# -------------------------------------------------------------------
+# CONFIGURACION DEL MOTOR DE VISION
+# -------------------------------------------------------------------
+# NOTA: Los umbrales estaban tomando valores de settings.umbral_alto y settings.umbral_bajo
+# Pero en el servidor de Render habia un problema con el cache de Pydantic.
+# La solucion temporal fue hardcodear los valores directamente aqui.
+#
+# Valores calibrados para el modelo de deteccion de dominadas:
+# - umbral_alto (0.20): Posicion del hombro cuando el cuerpo esta ABAJO
+# - umbral_bajo (0.30): Posicion del hombro cuando el cuerpo esta ARRIBA
+# Estos valores fueron determinados durante la fase de calibracion.
+# -------------------------------------------------------------------
+
 # Creamos una instancia global del motor de vision
-# Le pasamos los umbrales que definimos en la configuracion
-# Estos umbrales son para determinar cuando esta arriba o abajo en la barra
+# Le pasamos los umbrales HARDCODADOS temporalmente para que funcione el deployment
 vision_engine = VisionEngine(
-    umbral_alto=settings.umbral_alto,
-    umbral_bajo=settings.umbral_bajo
+    umbral_alto=0.20,   # Valor calibrado: cuerpo abajo = Y del hombro mas alto
+    umbral_bajo=0.30    # Valor calibrado: cuerpo arriba = Y del hombro mas bajo
 )
+
 
 # Creamos una instancia del procesador de video
 # Le pasamos el motor de vision y las carpetas donde se guardan los archivos
@@ -110,7 +124,7 @@ async def analisar_video(file: UploadFile = File(...)):
             }
         )
     
-    # Validamos el tamaño del archivo
+    # Validamos el tamano del archivo
     # Leemos el contenido del archivo (esto puede ser pesado para archivos grandes)
     contenido = await file.read()
     if len(contenido) > settings.max_video_size_bytes:
