@@ -14,21 +14,16 @@ def setup_logging() -> None:
     """
     Configura el logging estructurado para la aplicación.
     
-    Esta configuración utiliza ProcessorFormatter en lugar del obsoleto ProcessorRenderer,
-    compatible con structlog>=24.1.0.
+    Esta configuración es compatible con structlog>=24.1.0.
     """
-    # Configuración de processors para structlog
-    processors = [
-        filter_by_level,
-        add_log_level,
-        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-    ]
-    
-    # Configurar structlog
+    # Configurar structlog de forma simple
     structlog.configure(
-        processors=processors,
+        processors=[
+            filter_by_level,
+            add_log_level,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
         wrapper_class=structlog.stdlib.ProcessorFormatter,
-        context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
