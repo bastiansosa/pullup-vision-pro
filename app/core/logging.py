@@ -7,7 +7,6 @@ import logging
 import sys
 
 import structlog
-from structlog.stdlib import add_log_level, filter_by_level
 
 
 def setup_logging() -> None:
@@ -16,14 +15,16 @@ def setup_logging() -> None:
     
     Esta configuración es compatible con structlog>=24.1.0.
     """
-    # Configurar structlog de forma simple
+    # Configurar processors
+    processors = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ]
+    
+    # Configurar structlog sin wrapper_class especial
     structlog.configure(
-        processors=[
-            filter_by_level,
-            add_log_level,
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-        ],
-        wrapper_class=structlog.stdlib.ProcessorFormatter,
+        processors=processors,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
