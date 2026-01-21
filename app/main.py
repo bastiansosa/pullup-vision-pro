@@ -128,7 +128,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Incluir routers
 # Aqui conectamos el router que creamos en api/endpoints.py
 # Sin esta linea, nuestros endpoints no estarian accesibles
-app.include_router(router)
+app.include_router(router, prefix="/api/v1")
 
 
 @app.get("/", include_in_schema=False)
