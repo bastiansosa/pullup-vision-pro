@@ -1,37 +1,49 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import os
+import tempfile
 from app.services.vision_engine import VisionEngine
+import io
 
 router = APIRouter()
 
 # Inicializar motor de vision una sola vez
 vision_engine = VisionEngine()
 
+
 @router.post("/analizar")
 async def analisar_video(file: UploadFile = File(...)):
     """
-    Analiza un video de dominadas.
+    Analiza un video de dominadas y devuelve el resultado + video.
     """
     # Guardar archivo temporalmente
-    temp_path = f"temp_{file.filename}"
-    with open(temp_path, "wb") as f:
+    temp_input = f"temp_input_{file.filename}"
+    temp_output = f"temp_output_{file.filename}"
+    
+    with open(temp_input, "wb") as f:
         content = await file.read()
         f.write(content)
     
     try:
-        # CAMBIO CLAVE: generar_video=True para guardar el video con landmarks
-        resultado = vision_engine.procesar_video(temp_path, generar_video=True)
+        # Procesar video con analisis
+        resultado = vision_engine.procesar_video(temp_input, generar_video=True, output_filename=temp_output)
         
-        return resultado
+        if "error" in resultado:
+            raise HTTPException(status_code=400, detail=resultado["error"])
+        
+        # Devolver resultado + video
+        return {
+            **resultado,
+            "video_procesado": f"/api/v1/video/{temp_output}"
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
     finally:
-        # Borrar archivo temporal
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        # Limpiar archivos temporales
+        if os.path.exists(temp_input):
+            os.remove(temp_input)
 
 
 @router.get("/video/{filename}")
