@@ -197,6 +197,11 @@
             color: #fff;
         }
         
+        .btn-download {
+            background: linear-gradient(135deg, #00c4a7, #009688);
+            color: #fff;
+        }
+        
         .toast {
             position: fixed;
             bottom: 30px;
@@ -253,19 +258,19 @@
     <div class="container">
         <header>
             <h1>PullUp Vision Pro</h1>
-            <p class="subtitle">Análisis inteligente de dominadas con IA</p>
+            <p class="subtitle">Analisis inteligente de dominadas con IA</p>
         </header>
         
         <div class="upload-zone" id="uploadZone">
             <div class="upload-icon">📹</div>
-            <p class="upload-text">Arrastra tu video aquí o haz clic para seleccionar</p>
-            <p class="upload-hint">Formatos admitidos: MP4, MOV, AVI (máx. 50MB)</p>
+            <p class="upload-text">Arrastra tu video aqui o haz clic para seleccionar</p>
+            <p class="upload-hint">Formatos admitidos: MP4, MOV, AVI (max 50MB)</p>
             <input type="file" id="fileInput" accept="video/mp4,video/mov,video/avi">
         </div>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Analizando tu técnica de dominadas...</p>
+            <p>Analizando tu tecnica de dominadas...</p>
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
@@ -286,7 +291,7 @@
                 </div>
                 
                 <div class="stat-item">
-                    <span class="stat-label">Duración del video</span>
+                    <span class="stat-label">Duracion del video</span>
                     <span class="stat-value" id="durationValue">-</span>
                 </div>
                 
@@ -299,6 +304,11 @@
                     <span class="stat-label">Tiempo de procesamiento</span>
                     <span class="stat-value" id="processingTime">-</span>
                 </div>
+                
+                <!-- Boton de descarga -->
+                <a href="#" id="downloadBtn" class="btn btn-download" style="display: none;" download>
+                    Descargar Video
+                </a>
                 
                 <a href="/" class="btn btn-secondary" style="display: block; text-align: center;">
                     Analizar otro video
@@ -355,9 +365,9 @@
                 return;
             }
             
-            // Validar tamaño (50MB)
+            // Validar tamano (50MB)
             if (file.size > 50 * 1024 * 1024) {
-                showToast('Archivo muy grande. Máximo 50MB.', 'error');
+                showToast('Archivo muy grande. Maximo 50MB.', 'error');
                 return;
             }
             
@@ -397,14 +407,26 @@
             loading.style.display = 'none';
             results.style.display = 'grid';
             
-            // Mostrar video
+            // Mostrar video con analisis
             const video = document.getElementById('resultVideo');
-            video.src = `/api/v1/video/${data.video_salida}`;
+            if (data.video_salida) {
+                video.src = `/api/v1/video/${data.video_salida}`;
+                video.style.display = 'block';
+                
+                // Configurar boton de descarga
+                const downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.href = `/api/v1/descargar/${data.video_salida}`;
+                downloadBtn.style.display = 'inline-block';
+            } else {
+                video.style.display = 'none';
+                const downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.style.display = 'none';
+            }
             
             // Mostrar contador
             document.getElementById('counterNumber').textContent = data.repeticiones;
             
-            // Mostrar estadísticas
+            // Mostrar estadisticas
             document.getElementById('durationValue').textContent = 
                 `${data.duracion_segundos.toFixed(1)}s`;
             document.getElementById('fpsValue').textContent = 
@@ -412,7 +434,7 @@
             document.getElementById('processingTime').textContent = 
                 `${data.tiempo_procesamiento.toFixed(2)}s`;
             
-            showToast('¡Análisis completado!', 'success');
+            showToast('Analisis completado!', 'success');
         }
         
         function showToast(message, type) {
