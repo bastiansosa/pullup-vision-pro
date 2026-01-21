@@ -9,21 +9,19 @@ from pathlib import Path
 class VisionEngine:
     """
     Motor de vision para analisis de ejercicio de dominadas.
+    Version mejorada con deteccion por angulos.
     """
     
     def __init__(self, output_dir: str = "static/videos"):
         """
         Inicializa el motor de vision.
-        
-        Args:
-            output_dir: Directorio donde se guardan los videos procesados.
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Configuracion de hombros (hardcodeada para ti)
-        self.alt_max_y = 0.35
-        self.alt_min_y = 0.55
+        # Configuracion por defecto
+        self.angulo_subir = 160  # Angulo para considerar que subio
+        self.angulo_bajar = 100  # Angulo para considerar que bajo
         self.confianza_minima = 0.5
         
         # Inicializar MediaPipe Pose
@@ -36,7 +34,6 @@ class VisionEngine:
             min_tracking_confidence=0.5
         )
         
-        # Utilidades de dibujo
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
         
@@ -64,7 +61,7 @@ class VisionEngine:
         return landmarks
     
     def _calcular_angulo(self, p1, p2, p3):
-        """Calcula el angulo en punto2."""
+        """Calcula el angulo en punto2 (p2 es el vertice)."""
         import math
         
         dx1 = p1['x'] - p2['x']
@@ -85,32 +82,56 @@ class VisionEngine:
         return abs(math.degrees(diferencia))
     
     def _detectar_repeticion(self, landmarks):
-        """Detecta si se ha completado una repeticion."""
+        """Detecta si se ha completado una repeticion usando angulos."""
         if not landmarks or len(landmarks) < 33:
             return None
+        
+        # Landmarks importantes para dominadas:
+        # 11 = hombro izquierdo, 13 = codo izquierdo, 15 = muneca izquierda
+        # 12 = hombro derecho, 14 = codo derecho, 16 = muneca derecha
         
         left_shoulder = landmarks[11]
         right_shoulder = landmarks[12]
         
-        # Usar el hombro con mejor visibilidad
-        if left_shoulder['visibility'] < self.confianza_minima and right_shoulder['visibility'] < self.confianza_minima:
+        # Usar el brazo con mejor visibilidad
+        if left_shoulder['visibility'] > right_shoulder['visibility']:
+            # Usar brazo izquierdo
+            shoulder = left_shoulder
+            elbow = landmarks[13]
+            wrist = landmarks[15]
+        else:
+            # Usar brazo derecho
+            shoulder = landmarks[12]
+            elbow = landmarks[14]
+            wrist = landmarks[16]
+        
+        # Verificar confianza minima
+        if shoulder['visibility'] < self.confianza_minima:
             return None
         
-        shoulder = left_shoulder if left_shoulder['visibility'] > right_shoulder['visibility'] else right_shoulder
+        # Calcular angulo del codo
+        angulo = self._calcular_angulo(shoulder, elbow, wrist)
         
-        if shoulder['y'] <= self.alt_max_y:
+        # Debug: mostrar angulo
+        print(f"DEBUG: Angulo={angulo:.1f}, Estado={self.state}")
+        
+        # Detectar fase
+        if angulo >= self.angulo_subir:
+            # Brazo extendido (arriba)
             if self.state == "down":
                 self.rep_count += 1
                 self.state = "up"
+                print(f"DEBUG: Repeticion detectada! Total={self.rep_count}")
                 return "up"
-        elif shoulder['y'] >= self.alt_min_y:
+        elif angulo <= self.angulo_bajar:
+            # Brazo flexionado (abajo)
             if self.state == "up":
                 self.state = "down"
                 return "down"
         
         return None
     
-    def _dibujar_info(self, frame, state="up"):
+    def _dibujar_info(self, frame, state="up", angulo=None):
         """Dibuja informacion en el frame."""
         # Contador de repeticiones
         cv2.putText(
@@ -135,18 +156,23 @@ class VisionEngine:
             2
         )
         
+        # Angulo si esta disponible
+        if angulo is not None:
+            cv2.putText(
+                frame,
+                f"Angulo: {angulo:.1f}°",
+                (20, 140),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 255, 0),
+                2
+            )
+        
         return frame
     
     def procesar_video(self, video_path: str, generar_video: bool = True) -> Dict:
         """
         Procesa un video de dominadas y cuenta repeticiones.
-        
-        Args:
-            video_path: Ruta del video de entrada.
-            generar_video: Si True, genera video con analisis.
-        
-        Returns:
-            Diccionario con resultados.
         """
         if not os.path.exists(video_path):
             return {"error": "El video no existe"}
@@ -177,6 +203,7 @@ class VisionEngine:
         
         frame_count = 0
         last_state = self.state
+        last_angulo = 0
         inicio = datetime.now()
         
         while True:
@@ -195,6 +222,21 @@ class VisionEngine:
                 if cambio:
                     last_state = cambio
                 
+                # Calcular angulo para mostrar
+                if len(landmarks) >= 33:
+                    left_shoulder = landmarks[11]
+                    right_shoulder = landmarks[12]
+                    if left_shoulder['visibility'] > right_shoulder['visibility']:
+                        elbow = landmarks[13]
+                        wrist = landmarks[15]
+                    else:
+                        elbow = landmarks[14]
+                        wrist = landmarks[16]
+                    last_angulo = self._calcular_angulo(
+                        left_shoulder if left_shoulder['visibility'] > right_shoulder['visibility'] else right_shoulder,
+                        elbow, wrist
+                    )
+                
                 # Dibujar esqueleto
                 self.mp_drawing.draw_landmarks(
                     frame,
@@ -204,7 +246,7 @@ class VisionEngine:
                 )
             
             # Dibujar informacion
-            frame = self._dibujar_info(frame, last_state)
+            frame = self._dibujar_info(frame, last_state, last_angulo)
             
             # Guardar frame
             if writer:
@@ -235,5 +277,7 @@ class VisionEngine:
         
         if video_output_path and os.path.exists(video_output_path):
             resultado["video_salida"] = os.path.basename(video_output_path)
+        
+        print(f"RESULTADO FINAL: {self.rep_count} repeticiones")
         
         return resultado
